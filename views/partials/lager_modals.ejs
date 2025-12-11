@@ -1,0 +1,157 @@
+<div id="item-modal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 800px;">
+        <h2 style="margin-top:0; color:white; display:flex; justify-content:space-between; align-items:center;">
+            <span>Artikel anlegen / bearbeiten</span>
+            <span onclick="window.closeAllModals()" style="cursor:pointer; font-size:1.5rem;">&times;</span>
+        </h2>
+        
+        <div class="modal-body">
+            <input type="hidden" id="edit-id">
+         
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="form-label" style="display:block; color:#94a3b8; margin-bottom:5px;">Produktname *</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="inp-title" class="form-input" placeholder="z.B. LG Side-by-Side..." 
+                           style="flex:1; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px;">
+                    
+                    <button onclick="window.startPriceSearch()" class="btn-secondary" 
+                            style="padding:0 20px; background:#3b82f6; color:white; border:none; border-radius:8px; cursor:pointer;">
+                        🔍 Preis
+                    </button>
+                </div>
+                <div id="suggestion-chips" style="display:flex; gap:5px; flex-wrap:wrap; margin-top:5px;"></div>
+            </div>
+
+            <div id="modal-price-results" style="display:none; margin-bottom:15px; max-height:200px; overflow-y:auto; border:1px solid #334155; border-radius:8px; padding:10px; background:#0f172a;"></div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin-bottom:15px;">
+                <div class="form-group">
+                    <label class="form-label" style="display:block; color:#94a3b8; margin-bottom:5px;">Marktpreis (€)</label>
+                    <input type="number" id="inp-market-price" class="form-input" step="0.01" onkeyup="window.updateCalculatorBase()" placeholder="0.00"
+                           style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:block; color:#f59e0b; margin-bottom:5px;">Mein EK (45%)</label>
+                    <input type="number" id="inp-price" class="form-input" step="0.01" placeholder="Auto-Calc"
+                           style="width:100%; padding:12px; background:#0f172a; border:1px solid #f59e0b; color:#f59e0b; border-radius:8px; font-weight:bold;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:block; color:#94a3b8; margin-bottom:5px;">Menge</label>
+                    <input type="number" id="inp-qty" class="form-input" value="1"
+                           style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px;">
+                </div>
+            </div>
+            
+            <div style="background: #1e293b; padding: 15px; border-radius: 8px; border: 1px solid #475569; margin-bottom: 20px;">
+                <h3 style="margin-top:0; font-size:1rem; color:#cbd5e1; border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:10px;">⚡ Blitz-Kalkulator</h3>
+                
+                <div class="calc-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px; font-size:0.9rem;">
+                    <div class="calc-row"><span>Original Preis:</span> <span class="calc-val" id="calc-otto" style="font-weight:bold; color:white;">0,00 €</span></div>
+                    <div class="calc-row"><span>EK (45%):</span> <span class="calc-val" id="calc-buy" style="color:#f59e0b; font-weight:bold;">0,00 €</span></div>
+                </div>
+          
+                <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+                    <div class="calc-row" style="margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+                        <span style="color:#94a3b8;">Dein Verkaufspreis:</span> 
+                        <input type="number" id="calc-sell-input" class="calc-input" placeholder="0.00" oninput="window.calculateProfit()" 
+                               style="width:100px; padding:5px; border-radius:4px; border:1px solid #475569; background:#1e293b; color:white; text-align:right;">
+                    </div>
+                    
+                    <div class="calc-row" style="font-size:0.8rem; color:#64748b; display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <span>- 19% MwSt (vom VK):</span> <span id="calc-tax">0,00 €</span>
+                    </div>
+                    <div class="calc-row" style="font-size:0.8rem; color:#64748b; display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span>- eBay/Gebühren (ca. 11%):</span> <span id="calc-fees">0,00 €</span>
+                    </div>
+
+                    <div class="calc-row" style="border-top:1px solid #334155; padding-top:10px; margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-weight:bold; color:white;">Dein Reingewinn:</span> 
+                        <span class="profit-val" id="calc-profit" style="font-size:1.2rem; font-weight:bold; color:#10b981;">0,00 €</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
+                <div class="form-group">
+                    <label class="form-label" style="display:block; color:#94a3b8; margin-bottom:5px;">Lagerort</label>
+                    <input type="text" id="inp-location" class="form-input" placeholder="z.B. Regal A1"
+                           style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="display:block; color:#94a3b8; margin-bottom:5px;">SKU / EAN</label>
+                    <input type="text" id="inp-sku" class="form-input" placeholder="Optional"
+                           style="width:100%; padding:12px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px;">
+                </div>
+            </div>
+
+            <hr style="border-color:#334155; margin:20px 0;">
+            
+            <div class="form-group" style="margin-bottom:15px;">
+                <label class="form-label" style="display:block; color:#94a3b8; margin-bottom:5px;">Konkurrenten / Watchlist</label>
+                <div id="competitor-list" style="margin-top:5px; max-height:100px; overflow-y:auto; border:1px solid #334155; padding:5px; border-radius:8px; background:#0f172a;"></div>
+            </div>
+
+            <input type="hidden" id="inp-image">
+            <input type="hidden" id="inp-source-url">
+            <input type="hidden" id="inp-source-name">
+
+            <div style="display:flex; justify-content:space-between; margin-top:25px;">
+                <button onclick="window.deleteItemWithId(document.getElementById('edit-id').value)" class="btn-mini" style="background:#ef4444; color:white; padding:12px 20px; border:none; border-radius:8px; cursor:pointer;">
+                    🗑️ Löschen
+                </button>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="window.closeAllModals()" class="btn-mini" style="background:#334155; color:white; padding:12px 20px; border:none; border-radius:8px; cursor:pointer;">
+                        Abbruch
+                    </button>
+                    <button onclick="window.saveItem()" class="btn-primary" style="background:#10b981; color:white; padding:12px 25px; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">
+                        💾 Speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="qr-scanner-modal" class="modal-overlay" style="z-index: 3000;">
+    <div class="modal-box" style="max-width: 500px; text-align: center;">
+        <h2 style="margin-top:0; color:white;">📷 Scanner</h2>
+        <div id="reader" style="width: 100%; min-height:300px; background:#000; border-radius:8px; overflow:hidden; margin-bottom:15px;"></div>
+        <div style="margin-top:20px; border-top:1px solid #334155; padding-top:15px;">
+            <label style="display:block; margin-bottom:5px; color:#94a3b8;">Manueller Code:</label>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="manual-code-input" class="form-input" placeholder="Code tippen..." style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px;">
+                <button onclick="window.triggerManualScan()" class="btn-primary" style="padding:10px; background:#3b82f6; border:none; border-radius:8px; color:white;">OK</button>
+            </div>
+        </div>
+        <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+            <button onclick="window.triggerCamera()" class="btn-secondary" style="background:#475569; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer;">📸 Foto-Scan (OCR)</button>
+            <input type="file" id="cam-input" accept="image/*" capture="environment" style="display:none;" onchange="window.handleImageCrop(this)">
+            <button onclick="window.stopQRScanner()" class="btn-mini" style="background:#ef4444; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer;">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<div id="match-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="margin-top:0; color:white;">Artikel verknüpfen</h2>
+        <input type="hidden" id="match-stock-id">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <input type="text" id="match-search-inp" class="form-input" placeholder="Suche in Datenbank..." style="flex:1; padding:10px; background:#0f172a; border:1px solid #334155; color:white; border-radius:8px;">
+            <button onclick="window.searchForMatch()" class="btn-secondary" style="background:#3b82f6; color:white; border:none; border-radius:8px; padding:0 20px; cursor:pointer;">Suchen</button>
+        </div>
+        <div id="match-list" style="max-height:300px; overflow-y:auto; background:#0f172a; border-radius:8px; padding:10px;"></div>
+        <button onclick="window.closeAllModals()" class="btn-mini" style="width:100%; margin-top:15px; background:#334155; color:white; border:none; padding:12px; border-radius:8px; cursor:pointer;">Abbrechen</button>
+    </div>
+</div>
+
+<div id="crop-modal" class="modal-overlay" style="z-index: 3100;">
+    <div class="modal-box" style="max-width:90vw; max-height:90vh; display:flex; flex-direction:column;">
+        <h2 style="margin-top:0; color:white;">Bild zuschneiden</h2>
+        <div style="flex:1; background:#000; overflow:hidden; border-radius:8px; margin-bottom:15px; min-height:300px;">
+            <img id="image-to-crop" style="max-width:100%; max-height:100%; display:block;">
+        </div>
+        <div style="text-align:right; display:flex; justify-content:end; gap:10px;">
+            <button onclick="window.closeAllModals()" class="btn-mini" style="background:#334155; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer;">Abbruch</button>
+            <button id="btn-ocr" onclick="window.performOCR()" class="btn-primary" style="background:#3b82f6; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer;">Text scannen</button>
+        </div>
+    </div>
+</div>

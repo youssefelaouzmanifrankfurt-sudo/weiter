@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Importierte Produkte</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/scraper.css">
+    <link rel="stylesheet" href="/css/imported.css">
+    <style>
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .detail-box { background: #151515; padding: 15px; border-radius: 8px; border: 1px solid #333; height: 150px; display: flex; flex-direction: column; }
+        .scroll-content { flex: 1; overflow-y: auto; font-size: 0.85rem; color: #ccc; line-height: 1.4; }
+        .box-label { color: #666; font-size: 0.7rem; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
+        
+        .calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #111; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        .calc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .calc-val { font-weight: bold; font-size: 1.1rem; }
+        .calc-input { background: #222; border: 1px solid #444; color: white; padding: 8px; border-radius: 6px; width: 100px; text-align: right; font-weight: bold; }
+        .profit-val { font-size: 1.5rem; font-weight: 800; color: #10b981; }
+        .profit-val.loss { color: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <%- include('partials/nav') %>
+
+    <div class="main-content">
+        <div style="text-align:center; margin-bottom:40px;">
+            <h1>📦 Ablage & Kalkulation</h1>
+            <p style="color:#888;">Berechne deinen Gewinn und starte den Bot.</p>
+        </div>
+        <div id="results-grid">
+            <div style="text-align:center; padding:50px; color:#666;">Lade Daten...</div>
+        </div>
+    </div>
+
+    <div id="upload-modal" class="modal-overlay">
+        <div class="compare-modal" style="width: 500px; height: auto; display: block;">
+            <div class="modal-header">
+                <h2 style="margin:0;">💰 Gewinn Rechner</h2>
+                <button onclick="closeUploadModal()" style="background:none; border:none; color:#666; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+           
+            <div class="modal-body" style="display:block; padding:25px;">
+                <div class="calc-grid">
+                    <div class="calc-row"><span>Original Preis:</span> <span class="calc-val" id="calc-otto">0 €</span></div>
+                    <div class="calc-row"><span>EK (45%):</span> <span class="calc-val" id="calc-buy" style="color:#f59e0b;">0 €</span></div>
+                </div>
+          
+                <div style="background: #1a1a1a; padding: 20px; border-radius: 12px; border: 1px solid #333;">
+                    <div class="calc-row"><span>Dein Verkaufspreis (Brutto):</span> <input type="number" id="calc-sell-input" class="calc-input" placeholder="0.00" oninput="calculateProfit()"></div>
+                    <div class="calc-row" style="font-size:0.8rem; color:#666;">
+                        <span>- 19% MwSt (vom VK):</span> <span id="calc-tax">0 €</span>
+                    </div>
+                    <div class="calc-row" style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
+                        <span>Dein Gewinn (Netto):</span> <span class="profit-val" id="calc-profit">0 €</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeUploadModal()" style="background:transparent; border:1px solid #333; color:#888; padding:10px 20px; border-radius:8px; cursor:pointer;">Abbrechen</button>
+                <button onclick="confirmUpload()" style="background:#10b981; border:none; color:black; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">🚀 Speichern & Bot</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let currentProduct = null;
+        let purchasePrice = 0; 
+
+        socket.emit('get-imported-products');
+
+        socket.on('update-imported-list', (list) => {
+            const grid = document.getElementById('results-grid');
+            grid.innerHTML = '';
+            if(!list || list.length === 0) { grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px; color:#666;">Ablage leer.</div>'; return; }
+
+            list.reverse().forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'import-card';
+                
+                let mainImg = (p.images && p.images.length > 0) ? p.images[0] : (p.img || 'https://via.placeholder.com/300');
+                let galleryHtml = '';
+                if(p.images && p.images.length > 1) {
+                    galleryHtml = '<div class="gallery-grid" style="margin-top:10px;">';
+                    p.images.slice(0, 4).forEach(src => { galleryHtml += `<img src="${src}" class="thumb-img" onclick="window.open('${src}')">`; });
+                    galleryHtml += '</div>';
+                }
+
+                let techContent = p.techData ? (Array.isArray(p.techData) ? '<ul>' + p.techData.slice(0,8).map(t => `<li>${t}</li>`).join('') + '</ul>' : p.techData) : 'Keine Daten';
+                let descContent = p.description ? p.description.substring(0, 300) + '...' : 'Keine Beschreibung';
+
+                // Sicheres Escaping für JSON im HTML-Attribut
+                const pString = JSON.stringify(p).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+
+                card.innerHTML = `
+                    <div class="media-col">
+                        <div class="main-img-wrap"><img src="${mainImg}" class="main-img"></div>
+                        ${galleryHtml}
+                    </div>
+                    <div class="info-col">
+                        <div class="header-row"><h2>${p.title}</h2><div class="prod-price">${p.price || '0 €'}</div></div>
+                        <div class="details-grid">
+                            <div class="detail-box"><div class="box-label">Beschreibung</div><div class="scroll-content">${descContent}</div></div>
+                            <div class="detail-box"><div class="box-label">Daten</div><div class="scroll-content">${techContent}</div></div>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn-compare" style="background:var(--accent); color:black; border:none;" onclick='openUploadModal(${pString})'>⬆️ Kalkulieren</button>
+                            <button class="btn-del" onclick="deleteItem('${p.url}')">🗑️</button>
+                        </div>
+                    </div>`;
+                grid.appendChild(card);
+            });
+        });
+
+        function deleteItem(url) { if(confirm("Löschen?")) socket.emit('delete-imported', url); }
+
+        // --- PREIS PARSER (Extrem robust) ---
+        function parseGermanPrice(input) {
+            if (!input) return 0;
+            if (typeof input === 'number') return input;
+            
+            let str = input.toString();
+            
+            // "1.299,00 €" -> Entferne Punkte, ersetze Komma durch Punkt
+            // "1299.99" (US) -> Bleibt so
+            
+            if (str.includes(',') && str.includes('.')) {
+                // Punkt ist Tausender, Komma ist Dezimal
+                str = str.replace(/\./g, '').replace(',', '.');
+            } else if (str.includes(',')) {
+                // Komma ist Dezimal
+                str = str.replace(',', '.');
+            } 
+            
+            // Alles entfernen außer Ziffern und Punkt
+            str = str.replace(/[^0-9.]/g, '');
+            return parseFloat(str) || 0;
+        }
+
+        function formatMoney(num) {
+            return num.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+        }
+
+        function openUploadModal(product) {
+            currentProduct = product;
+            let originalPrice = 0;
+            
+            if (product.price) {
+                originalPrice = parseGermanPrice(product.price);
+            }
+
+            // 1. EK berechnen (45%)
+            purchasePrice = originalPrice * 0.45;
+            
+            // UI Update
+            document.getElementById('calc-otto').innerText = formatMoney(originalPrice);
+            document.getElementById('calc-buy').innerText = formatMoney(purchasePrice);
+            document.getElementById('calc-sell-input').value = ""; // Reset
+            document.getElementById('calc-tax').innerText = "0,00 €";
+            document.getElementById('calc-profit').innerText = "0,00 €";
+            
+            document.getElementById('upload-modal').classList.add('open');
+        }
+
+        function calculateProfit() {
+            const sellInput = document.getElementById('calc-sell-input').value;
+            let sellPrice = parseFloat(sellInput) || 0;
+
+            // Rechnung: 
+            // Netto = Brutto / 1.19
+            // Steueranteil = Brutto - Netto
+            // Gewinn = Netto - EK
+            
+            const netto = sellPrice / 1.19;
+            const tax = sellPrice - netto;
+            const profit = netto - purchasePrice;
+
+            document.getElementById('calc-tax').innerText = formatMoney(tax);
+            const pEl = document.getElementById('calc-profit');
+            pEl.innerText = formatMoney(profit);
+            
+            if (profit > 0) {
+                pEl.className = 'profit-val';
+                pEl.innerText = "+" + pEl.innerText;
+            } else {
+                pEl.className = 'profit-val loss';
+            }
+        }
+
+        function closeUploadModal() { document.getElementById('upload-modal').classList.remove('open'); }
+        
+        function confirmUpload() {
+            if(currentProduct) {
+                currentProduct.targetPrice = document.getElementById('calc-sell-input').value;
+                socket.emit('upload-to-kleinanzeigen', currentProduct);
+                closeUploadModal();
+                alert("Bot gestartet! Der Artikel wird bearbeitet.");
+            }
+        }
+    </script>
+</body>
+</html>

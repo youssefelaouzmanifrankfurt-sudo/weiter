@@ -1,0 +1,92 @@
+<script>
+        // --- ⚡ FIX: PREIS-KALKULATION & SCRAPER-DATEN ---
+
+        const fmtEuro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+
+        // 1. Profit Kalkulator Logik
+        window.calculateProfit = function() {
+            // EK holen (wird automatisch aus Marktpreis berechnet)
+            const ekText = document.getElementById('calc-buy').innerText.replace('€','').replace('.','').replace(',','.').trim();
+            const ek = parseFloat(ekText) || 0;
+
+            // VK Input holen
+            const sellInput = document.getElementById('calc-sell-input');
+            const sell = parseFloat(sellInput.value) || 0;
+
+            if(sell === 0) {
+                document.getElementById('calc-profit').innerText = "0,00 €";
+                return;
+            }
+
+            // MwSt (Beispiel: 19% aus VK herausrechnen)
+            const tax = sell - (sell / 1.19);
+            document.getElementById('calc-tax').innerText = fmtEuro.format(tax);
+
+            // eBay/Gebühren (ca 11%)
+            const fees = sell * 0.11;
+            document.getElementById('calc-fees').innerText = fmtEuro.format(fees);
+
+            // Gewinn = VK - MwSt - Gebühren - EK
+            const profit = sell - tax - fees - ek;
+
+            const profitEl = document.getElementById('calc-profit');
+            profitEl.innerText = fmtEuro.format(profit);
+            
+            // Färbung: Grün bei Gewinn, Rot bei Verlust
+            if(profit > 0) profitEl.style.color = "#10b981"; 
+            else profitEl.style.color = "#ef4444"; 
+        };
+
+        // 2. Basis-Update: Wenn Marktpreis geändert wird (oder geladen wird)
+        window.updateCalculatorBase = function() {
+            const marketInput = document.getElementById('inp-market-price');
+            let marketVal = parseFloat(marketInput.value) || 0;
+
+            // Update Kalkulator Felder
+            document.getElementById('calc-otto').innerText = fmtEuro.format(marketVal);
+            
+            // 45% Regel
+            const ek = marketVal * 0.45;
+            document.getElementById('calc-buy').innerText = fmtEuro.format(ek);
+            
+            // EK Input (hidden/visible) auch updaten für Konsistenz
+            const ekInput = document.getElementById('inp-price');
+            if(ekInput) ekInput.value = ek.toFixed(2);
+
+            // Profit neu berechnen, falls VK schon eingetragen
+            window.calculateProfit();
+        };
+
+        // 3. WICHTIG: Hook in das Öffnen des Modals (Der eigentliche Fix für den Scraper)
+        // Wir fangen den Aufruf ab, lassen das Original laufen und updaten dann den Kalkulator.
+        const originalOpenCreateModal = window.openCreateModal;
+
+        window.openCreateModal = function(id) {
+            // 1. Originale Funktion aufrufen
+            if(originalOpenCreateModal) originalOpenCreateModal(id);
+            else {
+                document.getElementById('item-modal').classList.add('active');
+                if(id) document.getElementById('edit-id').value = id;
+            }
+
+            // 2. Kurz warten, bis Daten geladen sind (100ms), dann Kalkulator füllen
+            setTimeout(() => {
+                const marketInp = document.getElementById('inp-market-price');
+                let marketVal = parseFloat(marketInp.value) || 0;
+                
+                // Falls Input leer ist, aber EK existiert (Scraper-Sonderfall)
+                if(marketVal === 0) {
+                    const ekInp = document.getElementById('inp-price');
+                    let ekVal = parseFloat(ekInp.value) || 0;
+                    if(ekVal > 0) {
+                        marketVal = ekVal / 0.45;
+                        marketInp.value = marketVal.toFixed(2);
+                    }
+                }
+
+                // Kalkulator initialisieren
+                window.updateCalculatorBase();
+                console.log("🛠️ Kalkulator-Fix angewendet: Preis übernommen:", marketVal);
+            }, 150); 
+        };
+    </script>
