@@ -1,92 +1,487 @@
-<script>
-        // --- ⚡ FIX: PREIS-KALKULATION & SCRAPER-DATEN ---
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .warehouse-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+        }
+        
+        .warehouse-header {
+            margin-bottom: 20px;
+        }
+        
+        .warehouse-main {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        
+        .search-section {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+        }
+        
+        .results-section {
+            flex: 2;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+        }
+        
+        .warehouse-section {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .item-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #fafafa;
+        }
+        
+        .item-card.online {
+            border-left: 4px solid #10b981;
+        }
+        
+        .item-card.warehouse {
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .item-card.unlinked {
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .item-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .item-price {
+            color: #3b82f6;
+            font-weight: bold;
+        }
+        
+        .item-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .status-online {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .status-warehouse {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-unlinked {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .qr-code {
+            width: 100px;
+            height: 100px;
+            background: white;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        .match-score {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/nav') %>
+    
+    <div class="warehouse-container">
+        <div class="warehouse-header">
+            <h1>📦 Lagerverwaltung</h1>
+            <p>Scrape Produkte, verbinde sie mit bestehenden Anzeigen oder erstelle neue Einträge</p>
+        </div>
+        
+        <div class="warehouse-main">
+            <!-- Suchbereich -->
+            <div class="search-section">
+                <h3>🔍 Produkt suchen</h3>
+                <input type="text" id="searchInput" class="search-box" placeholder="Produktmodell eingeben...">
+                <button onclick="searchProduct()" class="btn btn-primary">Suchen</button>
+                
+                <div id="searchResults" style="margin-top: 20px;">
+                    <h4>Gefundene Produkte:</h4>
+                    <div id="productList"></div>
+                </div>
+            </div>
+            
+            <!-- Ergebnisse aus der Datenbank -->
+            <div class="results-section">
+                <h3>📋 Ähnliche Artikel aus Datenbank</h3>
+                <div id="databaseResults"></div>
+            </div>
+            
+            <!-- Lagerbestand -->
+            <div class="warehouse-section">
+                <h3>📦 Lagerbestand</h3>
+                <div id="warehouseItems"></div>
+            </div>
+        </div>
+    </div>
 
-        const fmtEuro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
-
-        // 1. Profit Kalkulator Logik
-        window.calculateProfit = function() {
-            // EK holen (wird automatisch aus Marktpreis berechnet)
-            const ekText = document.getElementById('calc-buy').innerText.replace('€','').replace('.','').replace(',','.').trim();
-            const ek = parseFloat(ekText) || 0;
-
-            // VK Input holen
-            const sellInput = document.getElementById('calc-sell-input');
-            const sell = parseFloat(sellInput.value) || 0;
-
-            if(sell === 0) {
-                document.getElementById('calc-profit').innerText = "0,00 €";
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let currentSearchTerm = '';
+        let selectedProduct = null;
+        
+        // Socket Events
+        socket.on('connect', () => {
+            console.log('Verbunden mit Server');
+            // Lade die Lagerbestände beim Verbindungsaufbau
+            socket.emit('request-stock-list');
+        });
+        
+        socket.on('stock-list-data', (data) => {
+            displayWarehouseItems(data);
+        });
+        
+        socket.on('db-match-search-results', (results) => {
+            displayDatabaseResults(results);
+        });
+        
+        socket.on('force-reload-stock', () => {
+            loadWarehouseItems();
+        });
+        
+        // Suchfunktion
+        function searchProduct() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (!searchTerm) return;
+            
+            currentSearchTerm = searchTerm;
+            
+            // Starte echte Suche über Socket
+            socket.emit('search-external', { query: searchTerm, source: 'All' });
+            
+            // Zeige Ladeanzeige
+            document.getElementById('productList').innerHTML = '<p>Suche läuft...</p>';
+        }
+        
+        // Socket Events für Suchergebnisse
+        socket.on('external-search-results', (data) => {
+            if (data.results && Array.isArray(data.results)) {
+                displayScrapedProducts(data.results);
+                
+                // Automatisch Suche in DB durchführen
+                if (currentSearchTerm) {
+                    socket.emit('search-db-for-link', currentSearchTerm);
+                }
+            } else {
+                document.getElementById('productList').innerHTML = '<p>Keine Ergebnisse gefunden.</p>';
+            }
+        });
+        
+        socket.on('scan-error', (error) => {
+            document.getElementById('productList').innerHTML = `<p>Fehler bei der Suche: ${error}</p>`;
+        });
+        
+        // Zeigt gescrapte Produkte an
+        function displayScrapedProducts(products) {
+            const container = document.getElementById('productList');
+            container.innerHTML = '';
+            
+            if (!products || products.length === 0) {
+                container.innerHTML = '<p>Keine Produkte gefunden.</p>';
                 return;
             }
-
-            // MwSt (Beispiel: 19% aus VK herausrechnen)
-            const tax = sell - (sell / 1.19);
-            document.getElementById('calc-tax').innerText = fmtEuro.format(tax);
-
-            // eBay/Gebühren (ca 11%)
-            const fees = sell * 0.11;
-            document.getElementById('calc-fees').innerText = fmtEuro.format(fees);
-
-            // Gewinn = VK - MwSt - Gebühren - EK
-            const profit = sell - tax - fees - ek;
-
-            const profitEl = document.getElementById('calc-profit');
-            profitEl.innerText = fmtEuro.format(profit);
             
-            // Färbung: Grün bei Gewinn, Rot bei Verlust
-            if(profit > 0) profitEl.style.color = "#10b981"; 
-            else profitEl.style.color = "#ef4444"; 
-        };
-
-        // 2. Basis-Update: Wenn Marktpreis geändert wird (oder geladen wird)
-        window.updateCalculatorBase = function() {
-            const marketInput = document.getElementById('inp-market-price');
-            let marketVal = parseFloat(marketInput.value) || 0;
-
-            // Update Kalkulator Felder
-            document.getElementById('calc-otto').innerText = fmtEuro.format(marketVal);
-            
-            // 45% Regel
-            const ek = marketVal * 0.45;
-            document.getElementById('calc-buy').innerText = fmtEuro.format(ek);
-            
-            // EK Input (hidden/visible) auch updaten für Konsistenz
-            const ekInput = document.getElementById('inp-price');
-            if(ekInput) ekInput.value = ek.toFixed(2);
-
-            // Profit neu berechnen, falls VK schon eingetragen
-            window.calculateProfit();
-        };
-
-        // 3. WICHTIG: Hook in das Öffnen des Modals (Der eigentliche Fix für den Scraper)
-        // Wir fangen den Aufruf ab, lassen das Original laufen und updaten dann den Kalkulator.
-        const originalOpenCreateModal = window.openCreateModal;
-
-        window.openCreateModal = function(id) {
-            // 1. Originale Funktion aufrufen
-            if(originalOpenCreateModal) originalOpenCreateModal(id);
-            else {
-                document.getElementById('item-modal').classList.add('active');
-                if(id) document.getElementById('edit-id').value = id;
-            }
-
-            // 2. Kurz warten, bis Daten geladen sind (100ms), dann Kalkulator füllen
-            setTimeout(() => {
-                const marketInp = document.getElementById('inp-market-price');
-                let marketVal = parseFloat(marketInp.value) || 0;
-                
-                // Falls Input leer ist, aber EK existiert (Scraper-Sonderfall)
-                if(marketVal === 0) {
-                    const ekInp = document.getElementById('inp-price');
-                    let ekVal = parseFloat(ekInp.value) || 0;
-                    if(ekVal > 0) {
-                        marketVal = ekVal / 0.45;
-                        marketInp.value = marketVal.toFixed(2);
-                    }
+            // Sortiere Produkte nach Ähnlichkeit/Relevanz (angenommen, die Daten haben ein Bewertungsfeld)
+            const sortedProducts = products.sort((a, b) => {
+                // Wenn es ein Bewertungsfeld gibt, sortiere danach, sonst nach Preis
+                if (a.rating && b.rating) return b.rating - a.rating;
+                if (a.price && b.price) {
+                    const priceA = parseFloat(a.price.replace('€', '').replace(',', '.').trim());
+                    const priceB = parseFloat(b.price.replace('€', '').replace(',', '.').trim());
+                    return priceB - priceA; // Höhere Preise zuerst
                 }
-
-                // Kalkulator initialisieren
-                window.updateCalculatorBase();
-                console.log("🛠️ Kalkulator-Fix angewendet: Preis übernommen:", marketVal);
-            }, 150); 
-        };
+                return 0;
+            });
+            
+            sortedProducts.forEach((product, index) => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                
+                // Stelle sicher, dass wir überall gültige Daten haben
+                const title = product.title || 'Unbekannter Artikel';
+                const price = product.price || 'N/A';
+                const source = product.source || 'Quelle';
+                const image = product.image || '';
+                
+                card.innerHTML = `
+                    <div class="item-title">${title}</div>
+                    <div class="item-price">${price}</div>
+                    <div style="font-size: 12px; color: #666;">Quelle: ${source}</div>
+                    ${image ? `<img src="${image}" alt="Produktbild" style="max-width: 100px; max-height: 100px; margin: 5px 0;">` : ''}
+                    <br>
+                    <button class="btn btn-success" onclick="selectProduct('${index}', '${encodeURIComponent(JSON.stringify(product))}')">Auswählen</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        // Wählt ein Produkt aus
+        function selectProduct(productId, productJson) {
+            const product = JSON.parse(decodeURIComponent(productJson));
+            selectedProduct = product;
+            
+            // Hervorheben des ausgewählten Produkts
+            document.querySelectorAll('#productList .item-card').forEach(card => {
+                card.style.border = '1px solid #eee';
+            });
+            
+            event.target.closest('.item-card').style.border = '2px solid #10b981';
+            
+            console.log('Produkt ausgewählt:', product);
+        }
+        
+        // Zeigt Datenbankergebnisse an
+        function displayDatabaseResults(results) {
+            const container = document.getElementById('databaseResults');
+            container.innerHTML = '';
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p>Keine ähnlichen Artikel in der Datenbank gefunden.</p>';
+                return;
+            }
+            
+            results.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card ' + (item.linkedAdId ? 'online' : 'unlinked');
+                
+                const statusClass = item.linkedAdId ? 'status-online' : 'status-unlinked';
+                const statusText = item.linkedAdId ? 'Online' : 'Nicht verbunden';
+                
+                card.innerHTML = `
+                    <div class="item-title">${item.title}</div>
+                    <div class="item-price">${item.price || 'N/A'}</div>
+                    <span class="item-status ${statusClass}">${statusText}</span>
+                    <br>
+                    ${!item.linkedAdId ? 
+                        `<button class="btn btn-success" onclick="linkToWarehouse('${item.id}')">Mit Lager verbinden</button>` :
+                        `<button class="btn btn-warning" onclick="unlinkWarehouse('${item.id}')">Verbindung trennen</button>`
+                    }
+                    ${item.qrCode ? `<div class="qr-code">[QR]</div>` : ''}
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        // Verbindet einen Artikel mit dem Lager
+        async function linkToWarehouse(adId) {
+            if (!selectedProduct) {
+                alert('Bitte zuerst ein Produkt auswählen!');
+                return;
+            }
+            
+            // Hier würdest du entweder ein bestehendes Lageritem verbinden
+            // oder ein neues aus dem ausgewählten Produkt erstellen
+            const stockItem = {
+                id: 'STOCK-' + Date.now(),
+                title: selectedProduct.title,
+                price: selectedProduct.price,
+                purchasePrice: calculatePurchasePrice(selectedProduct.price),
+                location: 'Hauptlager',
+                qrCode: await generateQRCode('STOCK-' + Date.now()), // QR-Code für das neue Lageritem
+                linkedAdId: adId
+            };
+            
+            // Speichere das Lageritem und verbinde es
+            socket.emit('confirm-link', { stockId: stockItem.id, adId: adId });
+            
+            // Füge das Lageritem zur lokalen Anzeige hinzu
+            await addWarehouseItem(stockItem);
+            
+            alert('Artikel erfolgreich verbunden!');
+        }
+        
+        // Trennt die Verbindung zwischen Lager und Anzeige
+        function unlinkWarehouse(stockId) {
+            socket.emit('unlink-stock-item', stockId);
+            alert('Verbindung getrennt!');
+        }
+        
+        // Fügt ein Lageritem lokal hinzu
+        async function addWarehouseItem(item) {
+            const container = document.getElementById('warehouseItems');
+            const card = document.createElement('div');
+            card.className = 'item-card warehouse';
+            card.id = 'warehouse-' + item.id;
+            
+            card.innerHTML = `
+                <div class="item-title">${item.title}</div>
+                <div class="item-price">${item.price}</div>
+                <span class="item-status status-warehouse">Im Lager</span>
+                <div class="qr-code">[QR]</div>
+                <button class="btn btn-warning" onclick="moveToAblage('${item.id}')">Zur Ablage</button>
+                <button class="btn btn-danger" onclick="removeFromWarehouse('${item.id}')">Entfernen</button>
+            `;
+            container.appendChild(card);
+            
+            // QR-Code asynchron generieren und anzeigen
+            await updateQRCodeDisplay(item.id, card);
+        }
+        
+        // Lädt Lageritems
+        function loadWarehouseItems() {
+            socket.emit('request-stock-list');
+        }
+        
+        // Zeigt Lageritems an
+        async function displayWarehouseItems(items) {
+            const container = document.getElementById('warehouseItems');
+            container.innerHTML = '';
+            
+            if (!items || items.length === 0) {
+                container.innerHTML = '<p>Keine Artikel im Lagerbestand.</p>';
+                return;
+            }
+            
+            for (const item of items) {
+                const card = document.createElement('div');
+                card.className = 'item-card warehouse';
+                card.id = 'warehouse-' + item.id;
+                
+                card.innerHTML = `
+                    <div class="item-title">${item.title}</div>
+                    <div class="item-price">${item.price || item.purchasePrice || 'N/A'}</div>
+                    <span class="item-status status-warehouse">Lager: ${item.location || 'Unbekannt'}</span>
+                    <div class="qr-code">[QR]</div>
+                    <button class="btn btn-warning" onclick="moveToAblage('${item.id}')">Zur Ablage</button>
+                    <button class="btn btn-danger" onclick="removeFromWarehouse('${item.id}')">Entfernen</button>
+                `;
+                container.appendChild(card);
+                
+                // QR-Code asynchron generieren und anzeigen
+                await updateQRCodeDisplay(item.id, card);
+            }
+        }
+        
+        // Verschiebt Artikel in die Ablage
+        function moveToAblage(itemId) {
+            // Hier würdest du den Artikel in die Ablage verschieben
+            // z.B. in die imported.ejs Seite
+            console.log('Verschiebe Artikel zur Ablage:', itemId);
+            alert('Artikel wurde zur Ablage verschoben!');
+        }
+        
+        // Entfernt Artikel aus dem Lager
+        function removeFromWarehouse(itemId) {
+            if (confirm('Sind Sie sicher, dass Sie diesen Artikel aus dem Lager entfernen möchten?')) {
+                document.getElementById('warehouse-' + itemId).remove();
+            }
+        }
+        
+        // Hilfsfunktionen
+        function calculatePurchasePrice(priceStr) {
+            // Entferne € und andere Symbole, konvertiere zu Zahl
+            const num = parseFloat(priceStr.replace('€', '').replace(',', '.').trim());
+            return num * 0.45; // 45% Regel
+        }
+        
+        // Generiert einen QR-Code für ein Lageritem
+        async function generateQRCode(itemId) {
+            try {
+                const response = await fetch(`/api/qr/${itemId}`);
+                const data = await response.json();
+                if (data.url) {
+                    return data.url; // Data URL des QR-Codes
+                }
+            } catch (error) {
+                console.error('Fehler beim Generieren des QR-Codes:', error);
+            }
+            return 'QR-' + Date.now(); // Fallback
+        }
+        
+        // Funktion zum Aktualisieren der QR-Code-Anzeige
+        async function updateQRCodeDisplay(itemId, itemElement) {
+            const qrCodeUrl = await generateQRCode(itemId);
+            if (qrCodeUrl.startsWith('data:image')) {
+                const qrDiv = itemElement.querySelector('.qr-code');
+                qrDiv.innerHTML = `<img src="${qrCodeUrl}" alt="QR-Code" style="width: 100px; height: 100px;">`;
+            }
+        }
+        
+        // Initialisiere die Seite
+        document.addEventListener('DOMContentLoaded', function() {
+            loadWarehouseItems();
+        });
     </script>
+</body>
+</html>
