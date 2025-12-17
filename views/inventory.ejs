@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventar Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .inventory-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .inventory-header {
+            margin-bottom: 20px;
+        }
+
+        .inventory-main {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            flex-direction: column;
+        }
+
+        @media (min-width: 768px) {
+            .inventory-main {
+                flex-direction: row;
+            }
+        }
+
+        .form-section {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            max-height: fit-content;
+        }
+
+        .items-section {
+            flex: 2;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .item-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #fafafa;
+            position: relative;
+        }
+
+        .item-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 15px;
+            float: left;
+        }
+
+        .item-info {
+            margin-left: 115px;
+        }
+
+        .item-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .item-price {
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        .item-actions {
+            margin-top: 10px;
+        }
+
+        .upload-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .preview-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .remove-image {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <%- include('partials/nav') %>
+
+    <div class="inventory-container">
+        <div class="inventory-header">
+            <h1>📦 Inventar Management</h1>
+            <p>Füge neue Artikel hinzu und verwalte dein Inventar</p>
+        </div>
+
+        <div class="inventory-main">
+            <!-- Formularbereich -->
+            <div class="form-section">
+                <h3>➕ Neuen Artikel hinzufügen</h3>
+                <form id="inventoryForm">
+                    <div class="form-group">
+                        <label for="title">Titel *</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Beschreibung</label>
+                        <textarea id="description" name="description"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Kategorie</label>
+                        <select id="category" name="category">
+                            <option value="">Wähle Kategorie</option>
+                            <option value="Elektronik">Elektronik</option>
+                            <option value="Möbel">Möbel</option>
+                            <option value="Kleidung">Kleidung</option>
+                            <option value="Haushalt">Haushalt</option>
+                            <option value="Sonstiges">Sonstiges</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location">Standort</label>
+                        <input type="text" id="location" name="location" placeholder="z.B. Keller, Garage, Wohnzimmer">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="purchasePrice">Anschaffungspreis (€)</label>
+                        <input type="number" id="purchasePrice" name="purchasePrice" step="0.01" placeholder="z.B. 99.99">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimatedValue">Geschätzter Wert (€)</label>
+                        <input type="number" id="estimatedValue" name="estimatedValue" step="0.01" placeholder="z.B. 50.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="images">Bilder hochladen</label>
+                        <input type="file" id="images" name="images" accept="image/*" multiple onchange="previewImages(event)">
+                        <div id="previewContainer" class="upload-preview"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Artikel speichern</button>
+                </form>
+            </div>
+
+            <!-- Inventarliste -->
+            <div class="items-section">
+                <h3>📋 Dein Inventar</h3>
+                <input type="text" id="searchInventory" class="search-box" placeholder="Inventar durchsuchen...">
+                <div id="inventoryList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let inventoryItems = [];
+
+        // Socket Events
+        socket.on('connect', () => {
+            console.log('Verbunden mit Server');
+            loadInventoryItems();
+        });
+
+        // Formular-Submit
+        document.getElementById('inventoryForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Bilder zuerst hochladen
+            const imageFiles = document.getElementById('images').files;
+            const uploadedImagePaths = [];
+            
+            if (imageFiles.length > 0) {
+                for (let i = 0; i < imageFiles.length; i++) {
+                    const formData = new FormData();
+                    formData.append('image', imageFiles[i]);
+                    
+                    try {
+                        const response = await fetch('/api/upload-inventory-image', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await response.json();
+                        if (result.success) {
+                            uploadedImagePaths.push(result.path);
+                        } else {
+                            console.error('Fehler beim Hochladen des Bildes:', result.error);
+                        }
+                    } catch (error) {
+                        console.error('Fehler beim Hochladen des Bildes:', error);
+                    }
+                }
+            }
+            
+            const formData = new FormData(this);
+            const itemData = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                category: formData.get('category'),
+                location: formData.get('location'),
+                purchasePrice: parseFloat(formData.get('purchasePrice')) || 0,
+                estimatedValue: parseFloat(formData.get('estimatedValue')) || 0,
+                images: uploadedImagePaths
+            };
+
+            // Sende das Item zum Server
+            socket.emit('add-inventory-item', itemData);
+            
+            // Formular zurücksetzen
+            this.reset();
+            document.getElementById('previewContainer').innerHTML = '';
+        });
+
+        // Bilder-Vorschau
+        function previewImages(event) {
+            const previewContainer = document.getElementById('previewContainer');
+            previewContainer.innerHTML = '';
+
+            const files = event.target.files;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'preview-item';
+                    
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.alt = 'Vorschau';
+                    
+                    const button = document.createElement('button');
+                    button.className = 'remove-image';
+                    button.textContent = '×';
+                    button.onclick = function() {
+                        div.remove();
+                        // Auch das entsprechende File aus dem Input entfernen (komplexer, daher einfach neu laden)
+                    };
+                    
+                    div.appendChild(img);
+                    div.appendChild(button);
+                    previewContainer.appendChild(div);
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Lade Inventaritems
+        function loadInventoryItems() {
+            // In der aktuellen Implementierung laden wir die vorhandenen Daten
+            // Später würde dies vom Server kommen
+            socket.emit('get-inventory-items');
+        }
+
+        // Socket Event für Inventaritems
+        socket.on('inventory-items', (items) => {
+            inventoryItems = items;
+            displayInventoryItems(items);
+        });
+
+        // Zeige Inventaritems an
+        function displayInventoryItems(items) {
+            const container = document.getElementById('inventoryList');
+            container.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                container.innerHTML = '<p>Keine Artikel im Inventar.</p>';
+                return;
+            }
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                
+                // Formatierung der Preise
+                const purchasePrice = item.purchasePrice ? `Anschaffung: €${parseFloat(item.purchasePrice).toFixed(2)}` : '';
+                const estimatedValue = item.estimatedValue ? `Wert: €${parseFloat(item.estimatedValue).toFixed(2)}` : '';
+                
+                let imageHtml = '';
+                if (item.images && item.images.length > 0) {
+                    // Zeige das erste Bild als Vorschaubild
+                    imageHtml = `<img src="${item.images[0]}" alt="${item.title}" class="item-image" onerror="this.src='https://via.placeholder.com/100x100?text=No+Image'">`;
+                } else {
+                    imageHtml = `<div style="width: 100px; height: 100px; background: #eee; border-radius: 4px; float: left; display: flex; align-items: center; justify-content: center; margin-right: 15px;">📷</div>`;
+                }
+                
+                // Erstelle HTML für zusätzliche Bilder
+                let additionalImagesHtml = '';
+                if (item.images && item.images.length > 1) {
+                    additionalImagesHtml = '<div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px;">';
+                    for (let i = 1; i < Math.min(item.images.length, 4); i++) { // Max 3 zusätzliche Bilder
+                        additionalImagesHtml += `<img src="${item.images[i]}" alt="Bild ${i+1}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" onerror="this.style.display='none';">`;
+                    }
+                    if (item.images.length > 4) {
+                        additionalImagesHtml += `<span style="font-size: 12px; color: #666;">+${item.images.length - 3} mehr</span>`;
+                    }
+                    additionalImagesHtml += '</div>';
+                }
+                
+                card.innerHTML = `
+                    ${imageHtml}
+                    <div class="item-info">
+                        <div class="item-title">${item.title}</div>
+                        <div>${item.category ? `<strong>Kategorie:</strong> ${item.category}` : ''}</div>
+                        <div>${item.location ? `<strong>Standort:</strong> ${item.location}` : ''}</div>
+                        <div>${purchasePrice}</div>
+                        <div>${estimatedValue}</div>
+                        <div style="font-size: 14px; color: #666; margin-top: 5px;">${item.description || ''}</div>
+                        ${additionalImagesHtml}
+                        <div class="item-actions">
+                            <button class="btn btn-warning" onclick="editItem('${item.id}')">Bearbeiten</button>
+                            <button class="btn btn-danger" onclick="deleteItem('${item.id}')">Löschen</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Suchfunktion für Inventar
+        document.getElementById('searchInventory').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            if (!searchTerm) {
+                displayInventoryItems(inventoryItems);
+                return;
+            }
+
+            const filteredItems = inventoryItems.filter(item => 
+                item.title.toLowerCase().includes(searchTerm) ||
+                (item.description && item.description.toLowerCase().includes(searchTerm)) ||
+                (item.category && item.category.toLowerCase().includes(searchTerm)) ||
+                (item.location && item.location.toLowerCase().includes(searchTerm))
+            );
+            
+            displayInventoryItems(filteredItems);
+        });
+
+        // Item bearbeiten
+        function editItem(id) {
+            alert('Bearbeitungsfunktion wird implementiert: ' + id);
+        }
+
+        // Item löschen
+        function deleteItem(id) {
+            if (confirm('Sind Sie sicher, dass Sie diesen Artikel löschen möchten?')) {
+                socket.emit('delete-inventory-item', id);
+            }
+        }
+
+        // Socket Events für Inventaränderungen
+        socket.on('inventory-item-added', (item) => {
+            inventoryItems.push(item);
+            displayInventoryItems(inventoryItems);
+        });
+
+        socket.on('inventory-item-deleted', (id) => {
+            inventoryItems = inventoryItems.filter(item => item.id !== id);
+            displayInventoryItems(inventoryItems);
+        });
+    </script>
+</body>
+</html>

@@ -4,7 +4,8 @@ const taskHandler = require('./taskHandler');
 const trackingHandler = require('./trackingHandler');
 const settingsHandler = require('./settingsHandler');
 const externalHandler = require('./external');
-const stockHandler = require('./stock'); 
+const stockHandler = require('./stock');
+const inventoryHandler = require('./inventory'); 
 const logger = require('../utils/logger');
 // WICHTIG: Wir laden jetzt direkt den Store für die Archiv-Funktion
 const inventoryService = require('../services/inventoryService'); 
@@ -30,6 +31,7 @@ module.exports = (io) => {
             if(settingsHandler) settingsHandler(io, socket);
             if(externalHandler) externalHandler(io, socket);
             if(stockHandler) stockHandler(io, socket);
+            if(inventoryHandler) inventoryHandler(io, socket);
         } catch (err) { console.error("❌ Handler Fehler:", err.message); }
 
         // --- DATENBANK EVENTS ---

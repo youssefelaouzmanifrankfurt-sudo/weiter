@@ -14,6 +14,7 @@ router.get('/datenbank', (req, res) => res.render('datenbank', { title: 'Datenba
 router.get('/tracking', (req, res) => res.render('tracking', { title: 'Tracking' }));
 router.get('/scraper', (req, res) => res.render('scraper', { title: 'Scraper' }));
 router.get('/imported', (req, res) => res.render('imported', { title: 'Ablage' }));
+router.get('/inventory', (req, res) => res.render('inventory', { title: 'Inventar' }));
 router.get('/lieferliste', (req, res) => res.render('lieferliste', { title: 'Lieferliste' }));
 router.get('/settings', (req, res) => res.render('settings', { title: 'Einstellungen' }));
 

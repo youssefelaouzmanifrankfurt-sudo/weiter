@@ -12,8 +12,9 @@ module.exports = (app) => {
     app.set('view engine', 'ejs');
     app.set('views', path.join(__dirname, '../../views'));
 
-    // 2. Standard Middleware
+    // 2. Statische Dateien (einschließlich uploads)
     app.use(express.static(path.join(__dirname, '../../public')));
+    app.use('/uploads', express.static(path.join(__dirname, '../../uploads'))); // Für Bild-Uploads
     app.use(express.json());
 
     // 3. Lade-Bildschirm Middleware

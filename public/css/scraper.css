@@ -11,7 +11,12 @@ body {
 .main-content { padding: 30px; width: 100%; max-width: 1400px; margin: 0 auto; flex: 1; }
 
 /* SEARCH BAR */
-.search-section { display: flex; gap: 15px; margin-bottom: 40px; }
+.search-section { 
+    display: flex; 
+    flex-direction: column;
+    gap: 15px; 
+    margin-bottom: 40px; 
+}
 .search-input {
     flex: 1; background: #151515; border: 1px solid #333; color: white;
     padding: 15px 25px; border-radius: 12px; font-size: 1.1rem; transition: 0.3s;
@@ -19,9 +24,12 @@ body {
 .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
 
 .btn-search {
-    background: var(--accent); color: black; border: none; padding: 0 40px;
+    background: var(--accent); color: black; border: none; padding: 15px 40px;
     border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer;
     transition: 0.2s;
+    align-self: flex-end;
+    width: 100%;
+    max-width: 200px;
 }
 .btn-search:hover { transform: translateY(-2px); box-shadow: 0 5px 20px var(--accent-glow); }
 
@@ -42,7 +50,7 @@ body {
 
 .p-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
 .p-source { font-size: 0.75rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-.p-title { font-size: 1rem; font-weight: 600; margin-bottom: 10px; line-height: 1.4; flex: 1; }
+.p-title { font-size: 1rem; font-weight: 600; margin-bottom: 10px; line-height: 1.4; flex: 1; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .p-price { font-size: 1.3rem; font-weight: 700; color: var(--accent); margin-bottom: 15px; }
 
 .btn-compare {
@@ -83,3 +91,76 @@ body {
 /* Loading */
 .loader { text-align: center; color: #666; margin-top: 50px; display: none; }
 .loader.active { display: block; }
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+    .main-content { padding: 15px; }
+    
+    .search-section { 
+        gap: 10px; 
+    }
+    
+    .search-input {
+        padding: 12px 15px; 
+        font-size: 1rem; 
+    }
+    
+    .btn-search {
+        padding: 12px; 
+        align-self: stretch;
+        max-width: none;
+    }
+    
+    .results-grid { 
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+        gap: 15px; 
+    }
+    
+    .p-img-wrap { 
+        height: 150px; 
+    }
+    
+    .p-body { 
+        padding: 15px; 
+    }
+    
+    .p-title { 
+        font-size: 0.9rem; 
+    }
+    
+    .p-price { 
+        font-size: 1.1rem; 
+    }
+    
+    .btn-compare {
+        padding: 8px; 
+    }
+    
+    .compare-modal {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .score-circle {
+        width: 80px; 
+        height: 80px;
+    }
+    
+    .score-val { 
+        font-size: 1.5rem; 
+    }
+}
+
+@media (max-width: 480px) {
+    .results-grid { 
+        grid-template-columns: 1fr; 
+    }
+    
+    .p-img-wrap { 
+        height: 200px; 
+    }
+    
+    .c-img { 
+        height: 150px; 
+    }
+}
