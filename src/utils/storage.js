@@ -2,10 +2,30 @@
 const fs = require('fs');
 const path = require('path');
 
+// Dynamische Konfiguration laden
+let config = {};
+try {
+    config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../config.json'), 'utf8'));
+} catch (error) {
+    console.error('Fehler beim Laden der Konfigurationsdatei:', error.message);
+    // Fallback-Werte
+    config = {
+        database_path: './data/anzeigen.db',
+        ghost_database_path: './data/ghost_anzeigen.db',
+        image_storage_path: './data/images/',
+        temp_storage_path: './temp/',
+        main_server_path: './data/',
+        client_data_path: './data/',
+        sync_interval_minutes: 120,
+        max_retries: 3,
+        concurrent_scrapes: 5
+    };
+}
+
 const PORT = process.env.PORT || 3000;
 const IS_MASTER = (String(PORT) === '3000');
-const SERVER_DATA_DIR = 'C:\\weeeeeee_data';
-const CLIENT_DATA_DIR = 'Z:\\'; 
+const SERVER_DATA_DIR = config.main_server_path || './data/';
+const CLIENT_DATA_DIR = config.client_data_path || './data/'; 
 const ACTIVE_PATH = IS_MASTER ? SERVER_DATA_DIR : CLIENT_DATA_DIR;
 
 const MODE = IS_MASTER ? "SERVER (Master)" : "CLIENT (Worker)";
