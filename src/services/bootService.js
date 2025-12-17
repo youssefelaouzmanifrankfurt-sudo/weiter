@@ -8,6 +8,25 @@ const chatMonitor = require('../scrapers/chat/monitor');
 const { connectToBrowser } = require('../scrapers/chat/connection');
 const startAutoScan = require('../jobs/scheduler');
 
+// Dynamische Konfiguration laden
+let config = {};
+try {
+    config = JSON.parse(fs.readFileSync(path.join(__dirname, '../../config.json'), 'utf8'));
+} catch (error) {
+    console.error('Fehler beim Laden der Konfigurationsdatei:', error.message);
+    // Fallback-Werte
+    config = {
+        database_path: './data/anzeigen.db',
+        ghost_database_path: './data/ghost_anzeigen.db',
+        image_storage_path: './data/images/',
+        temp_storage_path: './temp/',
+        main_server_path: './data/',
+        sync_interval_minutes: 120,
+        max_retries: 3,
+        concurrent_scrapes: 5
+    };
+}
+
 async function startSystem(io, port) {
     const IS_MAIN_SERVER = (String(port) === '3000');
 
@@ -17,8 +36,8 @@ async function startSystem(io, port) {
     if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
     if (IS_MAIN_SERVER) {
-        // Windows spezifischer Pfad (Original-Logik)
-        const serverPath = 'C:\\weeeeeee_data';
+        // Verwende den konfigurierten Hauptserver-Pfad
+        const serverPath = config.main_server_path || './data/';
         if (!fs.existsSync(serverPath)) {
             try { fs.mkdirSync(serverPath, { recursive: true }); } catch(e) {}
         }

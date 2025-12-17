@@ -1,0 +1,10 @@
+{
+  "database_path": "/workspace/data/anzeigen.db",
+  "ghost_database_path": "/workspace/data/ghost_anzeigen.db",
+  "image_storage_path": "/workspace/data/images/",
+  "temp_storage_path": "/workspace/temp/",
+  "main_server_path": "/workspace/data/",
+  "sync_interval_minutes": 120,
+  "max_retries": 3,
+  "concurrent_scrapes": 5
+}
