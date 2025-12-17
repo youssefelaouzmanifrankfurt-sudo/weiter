@@ -3,7 +3,18 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const QRCode = require('qrcode');
-const upload = multer({ dest: 'uploads/' });
+const path = require('path');
+const upload = multer({ 
+    dest: 'uploads/', 
+    fileFilter: (req, file, cb) => {
+        // Nur Bilder erlauben
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Nur Bilddateien erlaubt!'), false);
+        }
+    }
+});
 
 // Imports
 const ocrService = require('../services/ocrService');
@@ -55,6 +66,26 @@ router.post('/scan-image', upload.single('image'), async (req, res) => {
         }
 
         res.json({ success: true, model: modelName });
+    } catch (e) { 
+        console.error(e);
+        res.status(500).json({ error: e.message }); 
+    }
+});
+
+// Bild-Upload für Inventar
+router.post('/upload-inventory-image', upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Kein Bild hochgeladen' });
+        }
+        
+        // Dateiinformationen zurückgeben
+        res.json({ 
+            success: true, 
+            filename: req.file.filename,
+            path: `/uploads/${req.file.filename}`,
+            originalname: req.file.originalname
+        });
     } catch (e) { 
         console.error(e);
         res.status(500).json({ error: e.message }); 
